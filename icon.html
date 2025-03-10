@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Icon</title>
+    <style>
+        canvas {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="iconCanvas" width="256" height="256"></canvas>
+    <script>
+        const canvas = document.getElementById('iconCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Fondo transparente
+        ctx.clearRect(0, 0, 256, 256);
+        
+        // Dibujar el emoji documento
+        ctx.font = '200px Arial';
+        ctx.fillStyle = '#FF0000'; // Color rojo para PDF
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📄', 128, 128);
+        
+        // Agregar texto PDF
+        ctx.font = 'bold 72px Arial';
+        ctx.fillStyle = 'white';
+        ctx.fillText('PDF', 128, 150);
+        
+        // Descargar como imagen
+        const link = document.createElement('a');
+        link.download = 'pdf-icon.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    </script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertidor PDF a Markdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .buttons-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .action-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .primary-button {
+            background-color: #2196F3;
+            color: white;
+        }
+        .primary-button:hover {
+            background-color: #1976D2;
+        }
+        .secondary-button {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .secondary-button:hover {
+            background-color: #d5d5d5;
+        }
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .drop-zone {
+            padding: 30px;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .drop-zone.dragover {
+            background-color: #e8f5e9;
+            border-color: #4CAF50;
+        }
+        .drop-zone p {
+            margin: 0;
+            color: #666;
+        }
+        .file-input {
+            display: none;
+        }
+        .convert-button {
+            padding: 12px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .convert-button:hover {
+            background-color: #45a049;
+        }
+        .convert-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #resultado {
+            position: relative;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            background-color: #f9f9f9;
+            font-family: monospace;
+        }
+        .resultado-toolbar {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            gap: 10px;
+        }
+        .toolbar-button {
+            padding: 5px 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .toolbar-button:hover {
+            background-color: #1976D2;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .progress {
+            width: 100%;
+            height: 4px;
+            background-color: #f5f5f5;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Convertidor PDF a Markdown</h1>
+        
+        <div class="buttons-container">
+            <button class="action-button primary-button" id="selectButton">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Seleccionar PDF
+            </button>
+            <button class="action-button secondary-button" id="newButton">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+                    <path d="M18 9h-4V5h-4v4H6v4h4v4h4v-4h4z"/>
+                </svg>
+                Nuevo
+            </button>
+        </div>
+
+        <form class="upload-form" id="uploadForm">
+            <div class="drop-zone" id="dropZone">
+                <p>Arrastra y suelta tu archivo PDF aquí o selecciónalo arriba</p>
+                <input type="file" name="pdf" accept=".pdf" class="file-input" required>
+            </div>
+            <button type="submit" class="convert-button" disabled>Convertir a Markdown</button>
+            <div class="progress" id="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </form>
+        
+        <div id="loading" class="loading">Procesando archivo...</div>
+        <div id="error" class="error"></div>
+        <div id="resultado">
+            <div class="resultado-toolbar">
+                <button class="toolbar-button" id="copyButton" title="Copiar al portapapeles">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                    </svg>
+                    Copiar
+                </button>
+                <button class="toolbar-button" id="downloadButton" title="Descargar como archivo .md">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.querySelector('.file-input');
+        const convertButton = document.querySelector('.convert-button');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const resultado = document.getElementById('resultado');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const toolbar = document.querySelector('.resultado-toolbar');
+        const copyButton = document.getElementById('copyButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const selectButton = document.getElementById('selectButton');
+        const newButton = document.getElementById('newButton');
+
+        // Manejo de selección de archivo
+        selectButton.addEventListener('click', () => fileInput.click());
+
+        // Botón nuevo/limpiar
+        newButton.addEventListener('click', () => {
+            form.reset();
+            resultado.textContent = '';
+            toolbar.style.display = 'none';
+            updateButtonState();
+            mostrarMensaje('Arrastra y suelta tu archivo PDF aquí o selecciónalo arriba');
+        });
+
+        // Drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            
+            if (file && file.type === 'application/pdf') {
+                fileInput.files = dt.files;
+                updateButtonState();
+                mostrarMensaje(`Archivo seleccionado: ${file.name}`);
+            } else {
+                mostrarError('Por favor, selecciona un archivo PDF válido');
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                mostrarMensaje(`Archivo seleccionado: ${file.name}`);
+            }
+            updateButtonState();
+        });
+
+        function updateButtonState() {
+            const file = fileInput.files[0];
+            convertButton.disabled = !file;
+        }
+
+        function mostrarError(mensaje) {
+            error.textContent = mensaje;
+            error.style.display = 'block';
+            setTimeout(() => {
+                error.style.display = 'none';
+            }, 5000);
+        }
+
+        function mostrarMensaje(mensaje) {
+            dropZone.querySelector('p').textContent = mensaje;
+        }
+
+        // Copiar al portapapeles
+        copyButton.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(resultado.textContent);
+                const originalText = copyButton.textContent;
+                copyButton.textContent = '¡Copiado!';
+                setTimeout(() => copyButton.textContent = 'Copiar', 2000);
+            } catch (err) {
+                mostrarError('Error al copiar al portapapeles');
+            }
+        });
+
+        // Descargar como archivo .md
+        downloadButton.addEventListener('click', () => {
+            const blob = new Blob([resultado.textContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const fileName = fileInput.files[0]?.name.replace('.pdf', '') || 'documento';
+            a.href = url;
+            a.download = `${fileName}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            loading.style.display = 'block';
+            progress.style.display = 'block';
+            error.style.display = 'none';
+            resultado.textContent = '';
+            toolbar.style.display = 'none';
+            convertButton.disabled = true;
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/convert', true);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percentComplete + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        resultado.textContent = xhr.responseText;
+                        toolbar.style.display = 'flex';
+                    } else {
+                        throw new Error(xhr.responseText || 'Error al procesar el archivo');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    throw new Error('Error de red al subir el archivo');
+                };
+
+                xhr.send(formData);
+            } catch (err) {
+                mostrarError(err.message);
+                resultado.textContent = '';
+            } finally {
+                loading.style.display = 'none';
+                progress.style.display = 'none';
+                progressBar.style.width = '0%';
+                convertButton.disabled = false;
+                updateButtonState();
+            }
+        });
+    </script>
+</body>
+</html>
